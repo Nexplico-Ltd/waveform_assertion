@@ -143,27 +143,30 @@ def build_ui() -> gr.Blocks:
 
         # ── Event handlers ────────────────────────────────────────────────────
 
-        def on_image_upload(image_path: str | None, session: AssertionSession | None):
+        def on_image_upload(
+            image_path: str | None, session: AssertionSession | None
+        ) -> tuple:
+            """Step 1: VLM parsing. Returns immediately; brainstorm runs in .then()."""
             if not image_path:
-                yield session, "_Upload a waveform screenshot to begin._", []
-                return
+                return session, "_Upload a waveform screenshot to begin._", []
             if session is None:
                 session = AssertionSession()
             try:
                 summary = session.load_image(image_path)
             except Exception as e:
-                yield session, f"**Error parsing waveform:** {e}", []
-                return
+                return session, f"**Error parsing waveform:** {e}", []
+            placeholder = [{"role": "assistant", "content": "_Analyzing waveform and generating suggestions..._"}]
+            return session, summary, placeholder
 
-            # Show VLM summary immediately; placeholder in chatbot while LLM thinks
-            yield session, summary, [{"role": "assistant", "content": "_Analyzing waveform and generating suggestions..._"}]
-
+        def on_brainstorm(session: AssertionSession | None) -> tuple:
+            """Step 2: LLM brainstorm, chained after VLM via .then()."""
+            if session is None or not session.waveform_context:
+                return session, []
             try:
                 brainstorm = session.auto_brainstorm()
             except Exception as e:
                 brainstorm = f"**Error during brainstorm:** {e}"
-
-            yield session, summary, [{"role": "assistant", "content": brainstorm}]
+            return session, [{"role": "assistant", "content": brainstorm}]
 
         def on_send(
             user_msg: str,
@@ -238,6 +241,10 @@ def build_ui() -> gr.Blocks:
             on_image_upload,
             inputs=[image_input, session_state],
             outputs=[session_state, vlm_status, chatbot],
+        ).then(
+            on_brainstorm,
+            inputs=[session_state],
+            outputs=[session_state, chatbot],
         )
 
         for trigger in (send_btn.click, msg_input.submit):
