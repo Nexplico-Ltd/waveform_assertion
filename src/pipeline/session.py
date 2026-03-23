@@ -29,6 +29,32 @@ class AssertionSession:
         vlm_result = parse_waveform_image(image_path, client=self.client)
         return self.set_waveform(vlm_result)
 
+    def auto_brainstorm(self) -> str:
+        """
+        Automatically analyze the loaded waveform and suggest possible assertions.
+        Called after set_waveform(); result becomes the first assistant message.
+        """
+        if not self.waveform_context:
+            return ""
+
+        brainstorm_prompt = (
+            "Review the waveform analysis below and brainstorm possible verification checks.\n"
+            "Present each idea as a bullet point with a brief explanation of what it verifies "
+            "and why it matters. Do not generate code yet — focus on ideas.\n\n"
+            + self._waveform_summary
+        )
+
+        self.history.append({"role": "user", "content": brainstorm_prompt})
+        content, usage = generate_assertion(self.history, client=self.client)
+        self.history.append({"role": "assistant", "content": content})
+
+        if usage:
+            print(
+                f"[LLM] Brainstorm tokens: input={usage['prompt_tokens']}, "
+                f"output={usage['completion_tokens']}"
+            )
+        return content
+
     def set_waveform(self, vlm_result: dict) -> str:
         """Inject VLM parse result and return a markdown summary."""
         self.waveform_context = vlm_result

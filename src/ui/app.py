@@ -143,18 +143,27 @@ def build_ui() -> gr.Blocks:
 
         # ── Event handlers ────────────────────────────────────────────────────
 
-        def on_image_upload(
-            image_path: str | None, session: AssertionSession | None
-        ) -> tuple:
+        def on_image_upload(image_path: str | None, session: AssertionSession | None):
             if not image_path:
-                return session, "_Upload a waveform screenshot to begin._"
+                yield session, "_Upload a waveform screenshot to begin._", []
+                return
             if session is None:
                 session = AssertionSession()
             try:
                 summary = session.load_image(image_path)
-                return session, summary
             except Exception as e:
-                return session, f"**Error parsing waveform:** {e}"
+                yield session, f"**Error parsing waveform:** {e}", []
+                return
+
+            # Show VLM summary immediately; placeholder in chatbot while LLM thinks
+            yield session, summary, [{"role": "assistant", "content": "_Analyzing waveform and generating suggestions..._"}]
+
+            try:
+                brainstorm = session.auto_brainstorm()
+            except Exception as e:
+                brainstorm = f"**Error during brainstorm:** {e}"
+
+            yield session, summary, [{"role": "assistant", "content": brainstorm}]
 
         def on_send(
             user_msg: str,
@@ -228,7 +237,7 @@ def build_ui() -> gr.Blocks:
         image_input.upload(
             on_image_upload,
             inputs=[image_input, session_state],
-            outputs=[session_state, vlm_status],
+            outputs=[session_state, vlm_status, chatbot],
         )
 
         for trigger in (send_btn.click, msg_input.submit):
