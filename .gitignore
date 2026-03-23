@@ -7,7 +7,7 @@ __pycache__/
 dist/
 build/
 
-# 環境設定（含 API key，絕對不能 commit）
+# API key — never commit
 .env
 
 # 輸出結果
