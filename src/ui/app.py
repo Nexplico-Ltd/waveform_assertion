@@ -30,13 +30,30 @@ def _extract_code_blocks(text: str, lang_filter: str | None = None) -> list[tupl
 
 
 def _collect_from_history(
-    history: list[list], lang_filter: str | None = None
+    history: list, lang_filter: str | None = None
 ) -> list[tuple[str, str]]:
-    """Collect all code blocks from chatbot history."""
+    """Collect code blocks from chatbot history.
+    Handles both Gradio 6 dict format and legacy list-of-lists format.
+    """
     blocks = []
-    for _, assistant_msg in history:
-        if assistant_msg:
-            blocks.extend(_extract_code_blocks(assistant_msg, lang_filter))
+    for msg in history:
+        content: str | None = None
+        if isinstance(msg, dict) and msg.get("role") == "assistant":
+            raw = msg.get("content", "")
+            if isinstance(raw, str):
+                content = raw
+            elif isinstance(raw, list):
+                # Multimodal: extract text parts
+                content = " ".join(
+                    p if isinstance(p, str) else p.get("text", "")
+                    for p in raw
+                    if isinstance(p, (str, dict))
+                )
+        elif isinstance(msg, (list, tuple)) and len(msg) == 2:
+            # Legacy [user_msg, bot_msg] format
+            content = msg[1] if isinstance(msg[1], str) else None
+        if content:
+            blocks.extend(_extract_code_blocks(content, lang_filter))
     return blocks
 
 
@@ -64,11 +81,7 @@ def _refresh_assertion_panels(history: list[list]) -> tuple[str, str]:
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 def build_ui() -> gr.Blocks:
-    with gr.Blocks(
-        title="Waveform Assertion Assistant",
-        theme=gr.themes.Soft(),
-        css=".chatbot-wrap .message { font-size: 14px; }",
-    ) as demo:
+    with gr.Blocks(title="Waveform Assertion Assistant") as demo:
 
         session_state: gr.State = gr.State(None)
 
@@ -96,9 +109,6 @@ def build_ui() -> gr.Blocks:
                 chatbot = gr.Chatbot(
                     label="Conversation",
                     height=450,
-                    show_copy_button=True,
-                    render_markdown=True,
-                    bubble_full_width=False,
                 )
                 with gr.Row():
                     msg_input = gr.Textbox(
@@ -114,7 +124,7 @@ def build_ui() -> gr.Blocks:
         with gr.Accordion("Collected Assertions", open=True):
             with gr.Row():
                 sv_display = gr.Code(
-                    language="verilog",
+                    language=None,
                     label="SystemVerilog Assertions (.sv)",
                     interactive=False,
                     lines=12,
@@ -148,7 +158,7 @@ def build_ui() -> gr.Blocks:
 
         def on_send(
             user_msg: str,
-            history: list[list],
+            history: list[dict],
             session: AssertionSession | None,
         ):
             if not user_msg.strip():
@@ -158,7 +168,10 @@ def build_ui() -> gr.Blocks:
             if session is None:
                 session = AssertionSession()
 
-            history = (history or []) + [[user_msg, None]]
+            history = (history or []) + [
+                {"role": "user", "content": user_msg},
+                {"role": "assistant", "content": "..."},
+            ]
             yield history, "", session, "", ""
 
             try:
@@ -166,11 +179,11 @@ def build_ui() -> gr.Blocks:
             except Exception as e:
                 response = f"**Error:** {e}"
 
-            history[-1][1] = response
+            history[-1]["content"] = response
             sv, py = _refresh_assertion_panels(history)
             yield history, "", session, sv, py
 
-        def on_export_sv(history: list[list]):
+        def on_export_sv(history: list[dict]):
             blocks = _collect_from_history(history, "systemverilog")
             if not blocks:
                 return gr.File(visible=False)
@@ -182,7 +195,7 @@ def build_ui() -> gr.Blocks:
             tmp.close()
             return gr.File(value=tmp.name, visible=True)
 
-        def on_export_py(history: list[list]):
+        def on_export_py(history: list[dict]):
             blocks = (
                 _collect_from_history(history, "python")
                 + _collect_from_history(history, "spice")
@@ -238,4 +251,8 @@ def build_ui() -> gr.Blocks:
 
 if __name__ == "__main__":
     demo = build_ui()
-    demo.launch(server_port=7860, show_error=True)
+    demo.launch(
+        server_port=7860,
+        show_error=True,
+        theme=gr.themes.Soft(),
+    )
