@@ -3,4 +3,5 @@
 openai>=1.30.0          # OpenAI-compatible client (OpenRouter)
 python-dotenv>=1.0.0    # Load API key and endpoint config from .env
 pillow>=10.0.0          # Image pre-processing (optional)
+gradio>=4.0.0           # Web UI
 pytest>=8.0.0           # Test framework

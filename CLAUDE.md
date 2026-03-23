@@ -18,6 +18,8 @@ waveform_assertion/
 │   │   ├── vlm_parser.py     # VLM call + JSON parsing
 │   │   ├── llm_generator.py  # LLM call + assertion generation
 │   │   └── session.py        # Conversation state management + CLI
+│   ├── ui/
+│   │   └── app.py            # Gradio web UI
 │   └── prompts/
 │       ├── vlm_system.md     # VLM system prompt
 │       └── llm_system.md     # LLM assertion generation prompt
@@ -42,6 +44,9 @@ Both use the OpenAI-compatible API via OpenRouter. Config is in `src/pipeline/co
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Web UI (http://localhost:7860)
+PYTHONPATH=src python src/ui/app.py
 
 # CLI mode
 PYTHONPATH=src python -m pipeline.session path/to/waveform.png
