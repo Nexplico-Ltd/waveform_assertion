@@ -1,6 +1,6 @@
-# Waveform Assertion Pipeline — 環境需求
+# Waveform Assertion Pipeline — dependencies
 
-openai>=1.30.0          # OpenAI-compatible client（OpenRouter）
-python-dotenv>=1.0.0    # 從 .env 讀取 API key 與 endpoint 設定
-pillow>=10.0.0          # 圖片前處理（選用）
-pytest>=8.0.0           # 測試框架
+openai>=1.30.0          # OpenAI-compatible client (OpenRouter)
+python-dotenv>=1.0.0    # Load API key and endpoint config from .env
+pillow>=10.0.0          # Image pre-processing (optional)
+pytest>=8.0.0           # Test framework

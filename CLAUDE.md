@@ -63,3 +63,4 @@ pytest tests/ -v
 - VLM output must be structured JSON; LLM handles reasoning and generation
 - Prompt text lives in `prompts/`, never hardcoded in source files
 - VLM `<think>...</think>` CoT blocks must be stripped before passing to LLM
+- **All code, comments, docstrings, print statements, and documentation must be written in English. No other languages.**

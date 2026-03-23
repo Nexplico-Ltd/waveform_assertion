@@ -1,6 +1,6 @@
 """
-Pipeline 單元測試
-mock OpenRouter 端點，不需要真實 API key
+Pipeline unit tests.
+All OpenRouter endpoints are mocked — no real API key required.
 """
 
 import json
@@ -39,7 +39,7 @@ SAMPLE_VLM_RESULT = {
 
 
 def _make_mock_response(content: str) -> MagicMock:
-    """建立 mock OpenAI response"""
+    """Build a mock OpenAI chat completion response."""
     msg = MagicMock()
     msg.content = content
     choice = MagicMock()
@@ -51,7 +51,7 @@ def _make_mock_response(content: str) -> MagicMock:
     return resp
 
 
-# ── VLM Parser 測試 ───────────────────────────────────────────────────────────
+# ── VLM Parser tests ──────────────────────────────────────────────────────────
 
 class TestStripThinking:
     def test_strips_think_block(self):
@@ -69,7 +69,7 @@ class TestStripThinking:
 
 class TestParseWaveformImage:
     def test_clean_json_response(self, tmp_path):
-        """VLM 直接回傳乾淨 JSON"""
+        """VLM returns clean JSON directly."""
         img = tmp_path / "wave.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)  # minimal PNG header
 
@@ -84,7 +84,7 @@ class TestParseWaveformImage:
         assert result["confidence"] == 0.92
 
     def test_json_with_think_block(self, tmp_path):
-        """VLM 輸出含 <think> block，應自動剝離"""
+        """VLM output contains a <think> block that should be stripped."""
         img = tmp_path / "wave.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
 
@@ -97,7 +97,7 @@ class TestParseWaveformImage:
         assert result["waveform_type"] == "digital"
 
     def test_json_with_code_fence(self, tmp_path):
-        """VLM 輸出包在 ```json 裡"""
+        """VLM output is wrapped in a ```json code fence."""
         img = tmp_path / "wave.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
 
@@ -110,7 +110,7 @@ class TestParseWaveformImage:
         assert result["waveform_type"] == "digital"
 
     def test_json_parse_error_fallback(self, tmp_path):
-        """VLM 回傳壞 JSON → 降級處理"""
+        """VLM returns invalid JSON → fallback to raw output."""
         img = tmp_path / "wave.png"
         img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
 
@@ -124,7 +124,7 @@ class TestParseWaveformImage:
         assert "raw_vlm_output" in result
 
 
-# ── Session 測試 ──────────────────────────────────────────────────────────────
+# ── Session tests ─────────────────────────────────────────────────────────────
 
 class TestAssertionSession:
     def test_set_waveform_returns_summary(self):
@@ -135,14 +135,14 @@ class TestAssertionSession:
         assert "92%" in summary
 
     def test_set_waveform_low_confidence_note(self):
-        low_conf = {**SAMPLE_VLM_RESULT, "confidence": 0.3, "parsing_notes": "模糊截圖"}
+        low_conf = {**SAMPLE_VLM_RESULT, "confidence": 0.3, "parsing_notes": "blurry screenshot"}
         session = AssertionSession()
         summary = session.set_waveform(low_conf)
         assert "30%" in summary
-        assert "模糊截圖" in summary
+        assert "blurry screenshot" in summary
 
     def test_chat_first_turn_includes_vlm_context(self):
-        """第一輪對話應將 VLM JSON 附在 user 訊息後"""
+        """First chat turn must append the full VLM JSON to the user message."""
         session = AssertionSession()
         session.set_waveform(SAMPLE_VLM_RESULT)
 
@@ -152,28 +152,28 @@ class TestAssertionSession:
         )
         session.client = mock_client
 
-        session.chat("驗證 req-ack 握手")
+        session.chat("Verify req-ack handshake")
 
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args.kwargs["messages"]
         user_msg = next(m for m in messages if m["role"] == "user")
-        assert "VLM JSON" in user_msg["content"] or "波形解析結果" in user_msg["content"]
+        assert "Waveform Analysis" in user_msg["content"] or "VLM JSON" in user_msg["content"]
 
     def test_chat_collects_code_blocks(self):
-        """LLM 回覆中的 code block 應被自動收集"""
+        """Code blocks in LLM replies should be auto-collected."""
         session = AssertionSession()
         session.set_waveform(SAMPLE_VLM_RESULT)
 
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = _make_mock_response(
-            "以下是生成的 assertion：\n"
+            "Here is the generated assertion:\n"
             "```systemverilog\n"
             "assert property (@(posedge clk) req |-> ##[1:5] ack);\n"
             "```"
         )
         session.client = mock_client
 
-        session.chat("生成 req-ack assertion")
+        session.chat("Generate req-ack assertion")
         assert len(session.collected_code) == 1
         assert "req" in session.collected_code[0]
 

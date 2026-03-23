@@ -1,6 +1,6 @@
 """
-VLM 波形解析模組
-使用 google/gemini-flash-1.5（via OpenRouter）解析波形截圖 → 結構化 JSON
+VLM waveform parsing module.
+Uses google/gemini-flash-1.5 (via OpenRouter) to parse waveform screenshots into structured JSON.
 """
 
 import base64
@@ -20,7 +20,7 @@ def _load_system_prompt() -> str:
 
 
 def encode_image(image_path: str) -> tuple[str, str]:
-    """回傳 (base64_str, media_type)"""
+    """Return (base64_str, media_type) for the given image file."""
     ext = Path(image_path).suffix.lower()
     media_type = {
         ".png": "image/png",
@@ -34,7 +34,7 @@ def encode_image(image_path: str) -> tuple[str, str]:
 
 
 def strip_thinking(raw: str | None) -> str:
-    """剝離 <think>...</think> CoT block（防禦性處理，部分模型可能輸出）"""
+    """Strip <think>...</think> CoT blocks (defensive: some models may include them)."""
     if not raw:
         return ""
     match = re.search(r"<think>.*?</think>\s*(.*)", raw, re.DOTALL)
@@ -46,11 +46,11 @@ def parse_waveform_image(
     client: OpenAI | None = None,
 ) -> dict:
     """
-    用 VLM 解析波形截圖，回傳結構化 JSON dict。
-    失敗時降級回傳 {"raw_vlm_output": ..., "confidence": 0.0}
+    Parse a waveform screenshot with the VLM and return a structured JSON dict.
+    Falls back to {"raw_vlm_output": ..., "confidence": 0.0} on parse failure.
     """
     client = client or get_client()
-    print(f"[VLM] 解析波形截圖: {image_path}  (model: {VLM_MODEL})")
+    print(f"[VLM] Parsing waveform: {image_path}  (model: {VLM_MODEL})")
 
     b64, media_type = encode_image(image_path)
 
@@ -82,18 +82,18 @@ def parse_waveform_image(
     raw = response.choices[0].message.content
     json_str = strip_thinking(raw)
 
-    # 清理 markdown code fence
+    # Strip markdown code fence if present
     json_str = re.sub(r"^```(?:json)?\n?", "", json_str)
     json_str = re.sub(r"\n?```$", "", json_str)
 
     try:
         parsed = json.loads(json_str)
         print(
-            f"[VLM] 解析完成 | 類型: {parsed.get('waveform_type')} | "
-            f"信號數: {len(parsed.get('signals', []))} | "
-            f"信心度: {parsed.get('confidence', '?')}"
+            f"[VLM] Done | type: {parsed.get('waveform_type')} | "
+            f"signals: {len(parsed.get('signals', []))} | "
+            f"confidence: {parsed.get('confidence', '?')}"
         )
         return parsed
     except json.JSONDecodeError as e:
-        print(f"[VLM] JSON 解析失敗: {e}\n原始輸出:\n{json_str[:500]}")
+        print(f"[VLM] JSON parse failed: {e}\nRaw output:\n{json_str[:500]}")
         return {"raw_vlm_output": json_str, "confidence": 0.0}

@@ -12,9 +12,9 @@ LLM_MODEL: str = os.getenv("LLM_MODEL", "anthropic/claude-3.5-haiku")
 
 
 def get_client() -> OpenAI:
-    """回傳 OpenRouter-compatible OpenAI client（VLM 和 LLM 共用同一個端點）"""
+    """Return an OpenRouter-compatible OpenAI client (shared by VLM and LLM)."""
     if not OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY 未設定，請建立 .env 檔案")
+        raise ValueError("OPENROUTER_API_KEY is not set. Please create a .env file.")
     return OpenAI(
         base_url=OPENROUTER_BASE_URL,
         api_key=OPENROUTER_API_KEY,

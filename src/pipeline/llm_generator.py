@@ -1,6 +1,6 @@
 """
-LLM Assertion 生成模組
-使用 anthropic/claude-3.5-haiku（via OpenRouter）根據 VLM JSON + 工程師意圖生成 assertion
+LLM assertion generation module.
+Uses anthropic/claude-3.5-haiku (via OpenRouter) to generate assertions from VLM JSON and engineer intent.
 """
 
 from pathlib import Path
@@ -21,11 +21,11 @@ def generate_assertion(
     client: OpenAI | None = None,
 ) -> tuple[str, dict]:
     """
-    呼叫 LLM 生成 assertion。
+    Call the LLM to generate assertions.
 
     Args:
-        messages: 對話歷史（不含 system prompt，由此函式注入）
-        client:   OpenAI client，None 時自動建立
+        messages: Conversation history (without system prompt; injected here).
+        client:   OpenAI client; created automatically if None.
 
     Returns:
         (assistant_content, usage_stats)
