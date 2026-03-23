@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# 環境設定（含 API key，絕對不能 commit）
+.env
+
+# 輸出結果
+output/
+
+# IDE
+.vscode/
+.idea/
