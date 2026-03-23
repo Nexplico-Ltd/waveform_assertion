@@ -38,9 +38,20 @@ class AssertionSession:
             return ""
 
         brainstorm_prompt = (
-            "Review the waveform analysis below and brainstorm possible verification checks.\n"
-            "Present each idea as a bullet point with a brief explanation of what it verifies "
-            "and why it matters. Do not generate code yet — focus on ideas.\n\n"
+            "Review the waveform analysis below and suggest verification checks an engineer "
+            "should implement.\n\n"
+            "For each suggestion:\n"
+            "- State the check name and which template it maps to "
+            "(e.g. T1 Req→Ack Latency, M1 Rise Time)\n"
+            "- Fill in the key parameters from the waveform data "
+            "(signal names, timing values, voltage levels)\n"
+            "- Give a one-sentence explanation of what it verifies\n\n"
+            "Show a skeleton code block for each suggestion using the matching template, "
+            "with signal names and values substituted where known. "
+            "Use placeholder names (e.g. MAX_CYCLES, VDD) only where the value cannot be "
+            "determined from the waveform data.\n\n"
+            "Cover all signals and anomalies visible in the waveform. "
+            "End with a short note on which check is highest priority.\n\n"
             + self._waveform_summary
         )
 
